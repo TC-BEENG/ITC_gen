@@ -46,34 +46,34 @@ def makeSheetTest():
 
     # With openpyxl
     wb_template = openpyxl.load_workbook(filePath)
-    ws_FAT_template = wb_template["FAT_Template"]
+    ws_template = wb_template["Template"]
 
     # With pandas
     df_setup = pd.read_excel(filePath, "Setup")
     df_itcLayout = pd.read_excel(filePath, "ITC_Layout")
-    df_FAT_template = pd.read_excel(filePath, "FAT_Template") # TODO: Rename sheet to just template?
-    df_SAT_template = pd.read_excel(filePath, "SAT_Template") # Unused for now.
+    df_template = pd.read_excel(filePath, "Template")
+    #df_SAT_template = pd.read_excel(filePath, "SAT_Template") # Superseded
 
     projectName = df_setup["Project Name"][0]
     revision = df_setup["Revision"][0]
 
-    # Get Each FAT_Template Type in a list
-    ITC_types = (df_FAT_template["TYPE"].unique())
+    # Get Each Template Type in a list
+    ITC_types = (df_template["TYPE"].unique())
 
     # make dict which is {ITC name: Dataframe of template}
-    df_FAT_template_dict = dict.fromkeys(ITC_types, pd.DataFrame()) # initialise empty dataframes
+    df_template_dict = dict.fromkeys(ITC_types, pd.DataFrame()) # initialise empty dataframes
 
     # For template in ITC_types:
-    for idx, r in df_FAT_template.iterrows():
-        df_FAT_template_dict[r.iloc[0]] = pd.concat([df_FAT_template_dict[r.iloc[0]], r], axis=1) # construct template dataframes
+    for idx, r in df_template.iterrows():
+        df_template_dict[r.iloc[0]] = pd.concat([df_template_dict[r.iloc[0]], r], axis=1) # construct template dataframes
 
     # Need to transpose each dataframe to get as desired.
-    for key in df_FAT_template_dict.keys():
-        df_FAT_template_dict[key] = df_FAT_template_dict[key].transpose()
+    for key in df_template_dict.keys():
+        df_template_dict[key] = df_template_dict[key].transpose()
 
     # Loop by ITC type so we can make a workbook for each.
     for ITC in ITC_types:
-        if ITC == "FAT_HDR" or ITC== "FAT_FTR": # Dont make a sheet for FAT_HDR or footer
+        if ITC == "HDR" or ITC== "FTR": # Dont make a sheet for HDR or footer
             continue
         print("Generating {}...".format(ITC))
         wb = Workbook() # Workbook for each itc type
@@ -92,10 +92,13 @@ def makeSheetTest():
                 desc_lst.append("{}: {}".format(row["DEVICE_ID"], row["DESCRIPTION"]) )
                 ws = wb.create_sheet(sheetName)  # Create new worksheet for each row.
                 # Copy over dataframe for that ITC, concat with header and footer rows.
-                df_temp = pd.concat([df_FAT_template_dict["FAT_HDR"], df_FAT_template_dict[ITC], df_FAT_template_dict["FAT_FTR"]])
+                df_temp = pd.concat([df_template_dict["HDR"], df_template_dict[ITC], df_template_dict["FTR"]])
+                # Replace the Document Number
+                df_temp = df_temp.replace(to_replace = "DOCUMENT_NUMBER", value= sheetName)
+
                 df_temp = df_temp.drop(columns = 'TYPE') # Drop TYPE column
 
-                # Need to make dict for the substitutions {[field from FAT_Template Sheet]: Value from ITC Layout}
+                # Need to make dict for the substitutions {[field from Template Sheet]: Value from ITC Layout}
                 # Perform substitutions per row.
                 # Device ID and Description replacing as well
                 # sub_dict_keys = list(row.iloc[7:].index) # Gets series of substitution fields.
@@ -393,7 +396,6 @@ def mainGUI():
     btn_getpath = tk.Button(root, text='Download Log Files From Webserver',
                            command = lambda: getPath(label_path), width=btn_width, height=btn_hght)
 
-    #btn_makeSheet=
 
     # Organise
     btn_getpath.grid(row = 0, column = 0, sticky = "w", padx = 2)
